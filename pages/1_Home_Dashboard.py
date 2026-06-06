@@ -253,7 +253,7 @@ with st.sidebar:
     # Reservoir filter
     res_df = _df("Reservoir_Master")
     reservoirs = ["All Field"] + (sorted(res_df["Reservoir_Name"].dropna().unique().tolist())
-                                  if not res_df.empty else ["Mishrif", "Yamama", "Zubair", "Khasib"])
+                                  if not res_df.empty else ["MUS", "Yamama", "Zubair", "Khasib"])
     sel_res = st.selectbox("🎯 Reservoir", reservoirs, key="home_res_filter")
 
     st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
