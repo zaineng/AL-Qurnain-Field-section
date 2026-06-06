@@ -35,60 +35,6 @@ require_auth()
 st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
 st.markdown("""
 <style>
-/* ── Fullscreen overlay ─────────────────────────────────────────── */
-.img-fs-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 99999;
-    background: rgba(4, 12, 24, 0.96);
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 12px;
-    cursor: zoom-out;
-}
-.img-fs-overlay.active { display: flex; }
-.img-fs-overlay img {
-    max-width: 92vw;
-    max-height: 88vh;
-    object-fit: contain;
-    border-radius: 8px;
-    border: 1px solid #0d2540;
-    box-shadow: 0 0 60px rgba(0,0,0,0.8);
-    cursor: default;
-}
-.img-fs-title {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
-    color: #3a6a8a;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-}
-.img-fs-close {
-    position: fixed;
-    top: 18px;
-    right: 22px;
-    background: #071526;
-    border: 1px solid #0d2540;
-    border-radius: 6px;
-    color: #3aafff;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
-    padding: 5px 12px;
-    cursor: pointer;
-    letter-spacing: 1px;
-    z-index: 100000;
-    transition: background 0.15s;
-}
-.img-fs-close:hover { background: #0d2540; color: #fff; }
-.img-fs-hint {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 8px;
-    color: #1a4a6a;
-    letter-spacing: 1px;
-}
-
 /* ── Map panel ─────────────────────────────────────────────────── */
 .map-panel {
     background: #071526;
@@ -257,31 +203,6 @@ st.markdown("""
 }
 .sb-user-name { font-size: 12px; font-weight: 700; color: #3aafff; }
 .sb-user-role { font-size: 8px; color: #1a4a6a; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
-</style>
-
-<!-- ── Global fullscreen overlay (shared by all images) ── -->
-<div class="img-fs-overlay" id="aqFsOverlay" onclick="aqCloseFs(event)">
-    <button class="img-fs-close" onclick="aqCloseFs(null,true)">✕ CLOSE</button>
-    <div class="img-fs-title" id="aqFsTitle"></div>
-    <img id="aqFsImg" src="" alt="fullscreen" onclick="event.stopPropagation()" />
-    <div class="img-fs-hint">CLICK OUTSIDE IMAGE OR PRESS ESC TO CLOSE</div>
-</div>
-<script>
-function aqOpenFs(src, title) {
-    document.getElementById('aqFsImg').src   = src;
-    document.getElementById('aqFsTitle').textContent = title;
-    document.getElementById('aqFsOverlay').classList.add('active');
-}
-function aqCloseFs(e, force) {
-    if (force || !e || e.target === document.getElementById('aqFsOverlay')) {
-        document.getElementById('aqFsOverlay').classList.remove('active');
-        document.getElementById('aqFsImg').src = '';
-    }
-}
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') aqCloseFs(null, true);
-});
-</script>
 """, unsafe_allow_html=True)
 
 
@@ -332,7 +253,7 @@ with st.sidebar:
     # Reservoir filter
     res_df = _df("Reservoir_Master")
     reservoirs = ["All Field"] + (sorted(res_df["Reservoir_Name"].dropna().unique().tolist())
-                                  if not res_df.empty else ["MUS", "Yamama", "Zubair", "Khasib"])
+                                  if not res_df.empty else ["Mishrif", "Yamama", "Zubair", "Khasib"])
     sel_res = st.selectbox("🎯 Reservoir", reservoirs, key="home_res_filter")
 
     st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
@@ -582,18 +503,87 @@ with c_map:
 
     if img_b64:
         _map_src = f"data:image/png;base64,{img_b64}"
-        st.markdown(
-            f'<div class="map-panel">'
-            f'<div class="sec-title">🗺️ FIELD STRUCTURAL MAP</div>'
-            f'<div class="map-img-wrap">'
-            f'<img src="{_map_src}" alt="Structural map for {sel_res}" '
-            f'onclick="aqOpenFs(this.src,\'FIELD STRUCTURAL MAP — {sel_res.upper()}\')" />'
-            f'<button class="map-zoom-btn" '
-            f'onclick="aqOpenFs(document.querySelector(\'[alt=\\\"Structural map for {sel_res}\\\"]\').src,'
-            f'\'FIELD STRUCTURAL MAP — {sel_res.upper()}\')">⛶ FULLSCREEN</button>'
-            f'</div></div>',
-            unsafe_allow_html=True,
-        )
+        import streamlit.components.v1 as components
+        _map_label = f"FIELD STRUCTURAL MAP — {sel_res.upper()}"
+        components.html(f"""<!DOCTYPE html><html><head>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box;}}
+body{{background:transparent;overflow:hidden;}}
+.panel{{background:#071526;border:1px solid #0d2540;border-radius:9px;
+  padding:8px 10px 6px;height:258px;display:flex;flex-direction:column;}}
+.sec-title{{font-size:9px;color:#3a6a8a;letter-spacing:2px;text-transform:uppercase;
+  margin-bottom:6px;font-family:'Share Tech Mono',monospace;}}
+.img-wrap{{position:relative;flex:1;min-height:0;}}
+.thumb{{width:100%;height:100%;object-fit:contain;border-radius:5px;
+  cursor:zoom-in;display:block;transition:opacity .15s;}}
+.thumb:hover{{opacity:.85;}}
+.zoom-btn{{position:absolute;bottom:7px;right:7px;background:rgba(7,21,38,.88);
+  border:1px solid #1a4a6a;border-radius:5px;color:#3aafff;
+  font-family:'Share Tech Mono',monospace;font-size:9px;padding:4px 10px;
+  cursor:pointer;letter-spacing:1px;z-index:10;transition:background .15s;}}
+.zoom-btn:hover{{background:#0d2540;color:#fff;}}
+</style></head><body>
+<div class="panel">
+  <div class="sec-title">FIELD STRUCTURAL MAP</div>
+  <div class="img-wrap">
+    <img class="thumb" id="mapThumb" src="{_map_src}" />
+    <button class="zoom-btn" id="mapBtn">عرض كامل</button>
+  </div>
+</div>
+<script>
+var SRC   = document.getElementById('mapThumb').src;
+var LABEL = "{_map_label}";
+var OVID  = "aq_fs_overlay_map";
+
+function getOverlayCSS(id) {{
+  return '#'+id+'{{display:none;position:fixed;inset:0;z-index:2147483647;background:rgba(4,12,24,.97);align-items:center;justify-content:center;flex-direction:column;gap:12px;font-family:"Share Tech Mono",monospace;}}'
+    +'#'+id+'.on{{display:flex;}}'
+    +'#'+id+' img{{max-width:92vw;max-height:78vh;object-fit:contain;border-radius:8px;border:1px solid #0d2540;box-shadow:0 0 60px rgba(0,0,0,.9);cursor:default;}}'
+    +'#'+id+' .ft{{position:fixed;top:16px;right:20px;background:#0d2540;border:1px solid #1a4a6a;border-radius:6px;color:#3aafff;font-size:12px;padding:6px 16px;cursor:pointer;z-index:2147483648;}}'
+    +'#'+id+' .ft:hover{{background:#ff4545;border-color:#ff4545;color:#fff;}}'
+    +'#'+id+' .fl{{font-size:11px;color:#3aafff;letter-spacing:3px;text-transform:uppercase;}}'
+    +'#'+id+' .fc{{background:#071526;border:1px solid #1a4a6a;border-radius:7px;color:#ff6060;font-size:11px;padding:8px 36px;cursor:pointer;letter-spacing:2px;}}'
+    +'#'+id+' .fc:hover{{background:#ff4545;border-color:#ff4545;color:#fff;}}'
+    +'#'+id+' .fh{{font-size:8px;color:#1a4a6a;letter-spacing:1px;}}';
+}}
+
+function injectOverlay(p) {{
+  if (p.document.getElementById(OVID)) return;
+  var s = p.document.createElement('style');
+  s.textContent = getOverlayCSS(OVID);
+  p.document.head.appendChild(s);
+  var ov = p.document.createElement('div');
+  ov.id = OVID;
+  ov.innerHTML = '<button class="ft">X CLOSE</button>'
+    + '<div class="fl" id="'+OVID+'_lbl"></div>'
+    + '<img id="'+OVID+'_img" src="" />'
+    + '<button class="fc">X CLOSE FULLSCREEN</button>'
+    + '<div class="fh">Click outside or press ESC to close</div>';
+  p.document.body.appendChild(ov);
+  function close() {{
+    ov.classList.remove('on');
+    p.document.getElementById(OVID+'_img').src='';
+  }}
+  ov.querySelector('.ft').onclick = close;
+  ov.querySelector('.fc').onclick = close;
+  ov.querySelector('#'+OVID+'_img').onclick = function(e){{e.stopPropagation();}};
+  ov.onclick = function(e){{ if(e.target===ov) close(); }};
+  p.document.addEventListener('keydown', function(e){{ if(e.key==='Escape') close(); }});
+}}
+
+function openFs() {{
+  try {{
+    var p = window.parent;
+    injectOverlay(p);
+    p.document.getElementById(OVID+'_img').src = SRC;
+    p.document.getElementById(OVID+'_lbl').textContent = LABEL;
+    p.document.getElementById(OVID).classList.add('on');
+  }} catch(e) {{ console.error('FS error:', e); }}
+}}
+
+document.getElementById('mapThumb').addEventListener('click', openFs);
+document.getElementById('mapBtn').addEventListener('click', openFs);
+</script></body></html>""", height=270, scrolling=False)
     else:
         st.markdown(f"""
         <div class="map-panel">
@@ -623,18 +613,87 @@ with c_corr:
 
     if corr_b64:
         _corr_src = f"data:image/png;base64,{corr_b64}"
-        st.markdown(
-            f'<div class="map-panel">'
-            f'<div class="sec-title">📊 WELL CORRELATION</div>'
-            f'<div class="map-img-wrap">'
-            f'<img src="{_corr_src}" alt="Well correlation for {sel_res}" '
-            f'onclick="aqOpenFs(this.src,\'WELL CORRELATION — {sel_res.upper()}\')" />'
-            f'<button class="map-zoom-btn" '
-            f'onclick="aqOpenFs(document.querySelector(\'[alt=\\\"Well correlation for {sel_res}\\\"]\').src,'
-            f'\'WELL CORRELATION — {sel_res.upper()}\')">⛶ FULLSCREEN</button>'
-            f'</div></div>',
-            unsafe_allow_html=True,
-        )
+        import streamlit.components.v1 as components
+        _corr_label = f"WELL CORRELATION — {sel_res.upper()}"
+        components.html(f"""<!DOCTYPE html><html><head>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box;}}
+body{{background:transparent;overflow:hidden;}}
+.panel{{background:#071526;border:1px solid #0d2540;border-radius:9px;
+  padding:8px 10px 6px;height:258px;display:flex;flex-direction:column;}}
+.sec-title{{font-size:9px;color:#3a6a8a;letter-spacing:2px;text-transform:uppercase;
+  margin-bottom:6px;font-family:'Share Tech Mono',monospace;}}
+.img-wrap{{position:relative;flex:1;min-height:0;}}
+.thumb{{width:100%;height:100%;object-fit:contain;border-radius:5px;
+  cursor:zoom-in;display:block;transition:opacity .15s;}}
+.thumb:hover{{opacity:.85;}}
+.zoom-btn{{position:absolute;bottom:7px;right:7px;background:rgba(7,21,38,.88);
+  border:1px solid #1a4a6a;border-radius:5px;color:#3aafff;
+  font-family:'Share Tech Mono',monospace;font-size:9px;padding:4px 10px;
+  cursor:pointer;letter-spacing:1px;z-index:10;transition:background .15s;}}
+.zoom-btn:hover{{background:#0d2540;color:#fff;}}
+</style></head><body>
+<div class="panel">
+  <div class="sec-title">WELL CORRELATION</div>
+  <div class="img-wrap">
+    <img class="thumb" id="corrThumb" src="{_corr_src}" />
+    <button class="zoom-btn" id="corrBtn">عرض كامل</button>
+  </div>
+</div>
+<script>
+var SRC   = document.getElementById('corrThumb').src;
+var LABEL = "{_corr_label}";
+var OVID  = "aq_fs_overlay_corr";
+
+function getOverlayCSS(id) {{
+  return '#'+id+'{{display:none;position:fixed;inset:0;z-index:2147483647;background:rgba(4,12,24,.97);align-items:center;justify-content:center;flex-direction:column;gap:12px;font-family:"Share Tech Mono",monospace;}}'
+    +'#'+id+'.on{{display:flex;}}'
+    +'#'+id+' img{{max-width:92vw;max-height:78vh;object-fit:contain;border-radius:8px;border:1px solid #0d2540;box-shadow:0 0 60px rgba(0,0,0,.9);cursor:default;}}'
+    +'#'+id+' .ft{{position:fixed;top:16px;right:20px;background:#0d2540;border:1px solid #1a4a6a;border-radius:6px;color:#3aafff;font-size:12px;padding:6px 16px;cursor:pointer;z-index:2147483648;}}'
+    +'#'+id+' .ft:hover{{background:#ff4545;border-color:#ff4545;color:#fff;}}'
+    +'#'+id+' .fl{{font-size:11px;color:#3aafff;letter-spacing:3px;text-transform:uppercase;}}'
+    +'#'+id+' .fc{{background:#071526;border:1px solid #1a4a6a;border-radius:7px;color:#ff6060;font-size:11px;padding:8px 36px;cursor:pointer;letter-spacing:2px;}}'
+    +'#'+id+' .fc:hover{{background:#ff4545;border-color:#ff4545;color:#fff;}}'
+    +'#'+id+' .fh{{font-size:8px;color:#1a4a6a;letter-spacing:1px;}}';
+}}
+
+function injectOverlay(p) {{
+  if (p.document.getElementById(OVID)) return;
+  var s = p.document.createElement('style');
+  s.textContent = getOverlayCSS(OVID);
+  p.document.head.appendChild(s);
+  var ov = p.document.createElement('div');
+  ov.id = OVID;
+  ov.innerHTML = '<button class="ft">X CLOSE</button>'
+    + '<div class="fl" id="'+OVID+'_lbl"></div>'
+    + '<img id="'+OVID+'_img" src="" />'
+    + '<button class="fc">X CLOSE FULLSCREEN</button>'
+    + '<div class="fh">Click outside or press ESC to close</div>';
+  p.document.body.appendChild(ov);
+  function close() {{
+    ov.classList.remove('on');
+    p.document.getElementById(OVID+'_img').src='';
+  }}
+  ov.querySelector('.ft').onclick = close;
+  ov.querySelector('.fc').onclick = close;
+  ov.querySelector('#'+OVID+'_img').onclick = function(e){{e.stopPropagation();}};
+  ov.onclick = function(e){{ if(e.target===ov) close(); }};
+  p.document.addEventListener('keydown', function(e){{ if(e.key==='Escape') close(); }});
+}}
+
+function openFs() {{
+  try {{
+    var p = window.parent;
+    injectOverlay(p);
+    p.document.getElementById(OVID+'_img').src = SRC;
+    p.document.getElementById(OVID+'_lbl').textContent = LABEL;
+    p.document.getElementById(OVID).classList.add('on');
+  }} catch(e) {{ console.error('FS error:', e); }}
+}}
+
+document.getElementById('corrThumb').addEventListener('click', openFs);
+document.getElementById('corrBtn').addEventListener('click', openFs);
+</script></body></html>""", height=270, scrolling=False)
     else:
         st.markdown(f"""
         <div class="map-panel">
